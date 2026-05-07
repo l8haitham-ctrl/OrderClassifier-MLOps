@@ -1,0 +1,69 @@
+name: ML Pipeline CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  train-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r TP2_J2/requirements.txt
+          
+      - name: Run Unit Tests
+        run: |
+          # We only run the test_train.py here since it doesn't require MLflow models
+          pytest TP2_J2/tests/test_train.py -v
+          
+      - name: Start MLflow Server (Background)
+        run: |
+          mlflow server --host 0.0.0.0 --port 5000 &
+          sleep 5
+          
+      - name: Train Models & Register
+        run: |
+          cd TP2_J2
+          python train.py
+          
+      - name: Run Integration Tests
+        run: |
+          # Test if the best model is registered and meets accuracy threshold
+          pytest TP2_J2/tests/test_model.py -v
+
+  deploy-canary:
+    needs: train-and-test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install MLflow Client
+        run: |
+          pip install mlflow requests
+          
+      - name: Simulate Canary Deployment
+        run: |
+          cd TP2_J2
+          python deploy_canary.py
