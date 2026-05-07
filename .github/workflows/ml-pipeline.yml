@@ -24,12 +24,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r TP2_J2/requirements.txt
+          pip install -r requirements.txt
           
       - name: Run Unit Tests
         run: |
           # We only run the test_train.py here since it doesn't require MLflow models
-          pytest TP2_J2/tests/test_train.py -v
+          pytest tests/test_train.py -v
           
       - name: Start MLflow Server (Background)
         run: |
@@ -38,13 +38,12 @@ jobs:
           
       - name: Train Models & Register
         run: |
-          cd TP2_J2
           python train.py
           
       - name: Run Integration Tests
         run: |
           # Test if the best model is registered and meets accuracy threshold
-          pytest TP2_J2/tests/test_model.py -v
+          pytest tests/test_model.py -v
 
   deploy-canary:
     needs: train-and-test
@@ -65,5 +64,4 @@ jobs:
           
       - name: Simulate Canary Deployment
         run: |
-          cd TP2_J2
           python deploy_canary.py
